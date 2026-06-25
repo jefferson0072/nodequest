@@ -66,7 +66,7 @@ function Dashboard() {
     title: "",
     workload: "",
     input: "",
-    reward: 100,
+    reward: 50000,
   });
 
   const flash = (msg) => {
@@ -97,6 +97,8 @@ function Dashboard() {
     e.preventDefault();
     if (!jobForm.title) return flash("Give the job a title");
     if (!jobForm.workload) return flash("Pick a workload");
+    if (Number(jobForm.reward) < 50000)
+      return flash("Minimum reward is 50,000 QST");
 
     setPosting(true);
     try {
@@ -142,20 +144,11 @@ function Dashboard() {
         return flash(res.error);
       }
       flash(`Bounty posted — Tier ${res.job.tier} · ${jobForm.reward} QST funded`);
-      setJobForm({ title: "", workload: "", input: "", reward: 100 });
+      setJobForm({ title: "", workload: "", input: "", reward: 50000 });
       load();
     } finally {
       setPosting(false);
     }
-  }
-
-  async function settle(jobId) {
-    const res = await fetch(`/api/jobs/${jobId}/settle`, {
-      method: "POST",
-    }).then((r) => r.json());
-    if (res.error) return flash(res.error);
-    flash(`Winner: ${res.settlement.winnerName} — paid ${res.settlement.payout} QST`);
-    load();
   }
 
   const openJobs = jobs.filter((j) => j.status === "open").length;
@@ -191,7 +184,7 @@ function Dashboard() {
             </div>
             {jobs.length === 0 && <div className="empty">No jobs yet.</div>}
             {jobs.map((job) => (
-              <JobCard key={job.id} job={job} onSettle={() => settle(job.id)} />
+              <JobCard key={job.id} job={job} />
             ))}
           </article>
 
@@ -264,7 +257,8 @@ function Dashboard() {
                   <label>Reward (QST)</label>
                   <input
                     type="number"
-                    min="1"
+                    min="50000"
+                    step="1000"
                     value={jobForm.reward}
                     onChange={(e) =>
                       setJobForm({ ...jobForm, reward: Number(e.target.value) })
@@ -351,7 +345,7 @@ node bounty-agent.mjs \{"\n"}  --name my-rig \{"\n"}  --wallet YOUR_SOLANA_ADDRE
   );
 }
 
-function JobCard({ job, onSettle }) {
+function JobCard({ job }) {
   return (
     <div className="job">
       <div className="job-top">
@@ -388,18 +382,6 @@ function JobCard({ job, onSettle }) {
               </span>
             </div>
           ))}
-        </div>
-      )}
-
-      {job.status === "open" && (
-        <div className="actions">
-          <button
-            className="small good"
-            onClick={onSettle}
-            disabled={job.submissions.length === 0}
-          >
-            Verify & settle
-          </button>
         </div>
       )}
 

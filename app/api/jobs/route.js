@@ -26,6 +26,12 @@ export async function POST(req) {
   }
 
   const reward = Number(body.reward);
+  if (!Number.isFinite(reward) || reward < 50000) {
+    return NextResponse.json(
+      { error: "minimum reward is 50,000 QST" },
+      { status: 400 }
+    );
+  }
   let depositTx = null;
 
   // When payments are live, the bounty must be funded by the poster: verify the
