@@ -170,21 +170,9 @@ function Dashboard() {
         </Link>
         <nav className="nav">
           <Link href="/how-it-works">How it works</Link>
-          <span className={"pill" + (paymentsReady ? "" : " sim")}>
-            {paymentsReady ? "Live payouts" : "Payouts not configured"}
-          </span>
           {paymentsReady && <WalletMultiButton />}
         </nav>
       </header>
-
-      {!paymentsReady && (
-        <div className="notice">
-          Live payouts are off. Deploy the QST token and set{" "}
-          <code>SOLANA_RPC_URL</code>, <code>TOKEN_MINT</code> and{" "}
-          <code>PLATFORM_WALLET_SECRET</code> to enable on-chain settlement and
-          burns.
-        </div>
-      )}
 
       <section className="stats-grid compact">
         <Stat plain label="Open bounties" value={openJobs} />
