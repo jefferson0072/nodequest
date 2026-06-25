@@ -45,8 +45,7 @@ export default function HowItWorksPage() {
             <h3>Verify and settle</h3>
             <p>
               Consensus filters invalid results and a winner is selected. The
-              reward is split on-chain: the winner is paid, 20% is burned, and a
-              small fee supports the platform.
+              reward is split on-chain: the winner is paid 80% and 20% is burned.
             </p>
           </div>
         </article>
@@ -60,9 +59,9 @@ export default function HowItWorksPage() {
           through the network, supply shrinks — usage itself makes QST scarcer.
         </p>
         <ul className="bullet-list">
-          <li>Winner receives 77% of the bounty reward.</li>
+          <li>Winner receives 80% of the bounty reward.</li>
           <li>20% is burned on-chain, reducing total supply.</li>
-          <li>3% platform fee sustains the network.</li>
+          <li>No platform fee — every bounty either pays a provider or burns.</li>
           <li>Total burned to date is tracked live on the dashboard.</li>
         </ul>
       </section>

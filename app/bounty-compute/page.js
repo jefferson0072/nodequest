@@ -210,9 +210,8 @@ export default function BountyComputePage() {
               </div>
               {jobForm.reward > 0 && (
                 <div className="split-preview">
-                  Winner gets <strong>{(jobForm.reward * 0.77).toFixed(0)} QST</strong>{" "}
-                  · burned <strong>{(jobForm.reward * 0.2).toFixed(0)} QST</strong>{" "}
-                  · fee {(jobForm.reward * 0.03).toFixed(0)} QST
+                  Winner gets <strong>{(jobForm.reward * 0.8).toFixed(0)} QST</strong>{" "}
+                  · burned <strong>{(jobForm.reward * 0.2).toFixed(0)} QST</strong>
                 </div>
               )}
               <button type="submit">Post bounty</button>
