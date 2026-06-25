@@ -3,16 +3,63 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import { PublicKey, Transaction } from "@solana/web3.js";
+import {
+  getAssociatedTokenAddress,
+  getAccount,
+  createAssociatedTokenAccountInstruction,
+  createTransferInstruction,
+} from "@solana/spl-token";
+import { useConnection, useWallet } from "@solana/wallet-adapter-react";
+import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
+import WalletProviders from "./wallet-providers";
 
 const TIER_LABEL = { 1: "Light", 2: "Standard", 3: "Heavy" };
 
+// Build + send a QST transfer from the poster into the escrow wallet, returning
+// the confirmed signature. This is the on-chain bounty deposit.
+async function depositToEscrow({ connection, publicKey, sendTransaction, cfg, amount }) {
+  const mint = new PublicKey(cfg.tokenMint);
+  const escrow = new PublicKey(cfg.escrowWallet);
+  const fromAta = await getAssociatedTokenAddress(mint, publicKey);
+  const toAta = await getAssociatedTokenAddress(mint, escrow);
+
+  const tx = new Transaction();
+  // Create the escrow's token account if it doesn't exist yet (poster pays).
+  try {
+    await getAccount(connection, toAta);
+  } catch {
+    tx.add(
+      createAssociatedTokenAccountInstruction(publicKey, toAta, escrow, mint)
+    );
+  }
+  const raw = BigInt(Math.round(amount * 10 ** cfg.decimals));
+  tx.add(createTransferInstruction(fromAta, toAta, publicKey, raw));
+
+  const sig = await sendTransaction(tx, connection);
+  await connection.confirmTransaction(sig, "confirmed");
+  return sig;
+}
+
 export default function BountyComputePage() {
+  return (
+    <WalletProviders>
+      <Dashboard />
+    </WalletProviders>
+  );
+}
+
+function Dashboard() {
+  const { connection } = useConnection();
+  const { publicKey, sendTransaction } = useWallet();
+
   const [jobs, setJobs] = useState([]);
   const [providers, setProviders] = useState([]);
   const [workloads, setWorkloads] = useState({});
   const [paymentsReady, setPaymentsReady] = useState(false);
   const [stats, setStats] = useState({ burned: 0, paid: 0 });
   const [origin, setOrigin] = useState("https://your-app.vercel.app");
+  const [posting, setPosting] = useState(false);
   const [toast, setToast] = useState(null);
 
   const [jobForm, setJobForm] = useState({
@@ -24,7 +71,7 @@ export default function BountyComputePage() {
 
   const flash = (msg) => {
     setToast(msg);
-    setTimeout(() => setToast(null), 2600);
+    setTimeout(() => setToast(null), 3600);
   };
 
   const load = useCallback(async () => {
@@ -50,15 +97,56 @@ export default function BountyComputePage() {
     e.preventDefault();
     if (!jobForm.title) return flash("Give the job a title");
     if (!jobForm.workload) return flash("Pick a workload");
-    const res = await fetch("/api/jobs", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(jobForm),
-    }).then((r) => r.json());
-    if (res.error) return flash(res.error);
-    flash(`Bounty posted — Tier ${res.job.tier} assigned · ${jobForm.reward} QST`);
-    setJobForm({ title: "", workload: "", input: "", reward: 100 });
-    load();
+
+    setPosting(true);
+    try {
+      const payload = { ...jobForm };
+
+      // When payments are live, fund the bounty on-chain first.
+      if (paymentsReady) {
+        if (!publicKey) {
+          setPosting(false);
+          return flash("Connect your wallet to fund the bounty");
+        }
+        const cfg = await fetch("/api/config").then((r) => r.json());
+        if (!cfg.paymentsReady || !cfg.escrowWallet || cfg.decimals == null) {
+          setPosting(false);
+          return flash("Escrow not available — check token configuration");
+        }
+        flash("Approve the deposit in your wallet…");
+        let sig;
+        try {
+          sig = await depositToEscrow({
+            connection,
+            publicKey,
+            sendTransaction,
+            cfg,
+            amount: Number(jobForm.reward),
+          });
+        } catch (err) {
+          setPosting(false);
+          return flash(`Deposit cancelled or failed: ${err.message}`);
+        }
+        payload.depositTx = sig;
+        payload.poster = publicKey.toBase58();
+        flash("Deposit confirmed — opening bounty…");
+      }
+
+      const res = await fetch("/api/jobs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      }).then((r) => r.json());
+      if (res.error) {
+        setPosting(false);
+        return flash(res.error);
+      }
+      flash(`Bounty posted — Tier ${res.job.tier} · ${jobForm.reward} QST funded`);
+      setJobForm({ title: "", workload: "", input: "", reward: 100 });
+      load();
+    } finally {
+      setPosting(false);
+    }
   }
 
   async function settle(jobId) {
@@ -85,6 +173,7 @@ export default function BountyComputePage() {
           <span className={"pill" + (paymentsReady ? "" : " sim")}>
             {paymentsReady ? "Live payouts" : "Payouts not configured"}
           </span>
+          {paymentsReady && <WalletMultiButton />}
         </nav>
       </header>
 
@@ -212,9 +301,23 @@ export default function BountyComputePage() {
                 <div className="split-preview">
                   Winner gets <strong>{(jobForm.reward * 0.8).toFixed(0)} QST</strong>{" "}
                   · burned <strong>{(jobForm.reward * 0.2).toFixed(0)} QST</strong>
+                  {paymentsReady && (
+                    <>
+                      <br />
+                      You deposit{" "}
+                      <strong>{Number(jobForm.reward).toFixed(0)} QST</strong> into
+                      escrow to fund it.
+                    </>
+                  )}
                 </div>
               )}
-              <button type="submit">Post bounty</button>
+              <button type="submit" disabled={posting}>
+                {posting
+                  ? "Working…"
+                  : paymentsReady
+                  ? "Fund & post bounty"
+                  : "Post bounty"}
+              </button>
             </form>
           </article>
 
