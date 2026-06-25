@@ -43,9 +43,28 @@ export default function HowItWorksPage() {
           <span className="timeline-node">3</span>
           <div>
             <h3>Verify and settle</h3>
-            <p>Consensus filters invalid results, winner is selected, payout is settled.</p>
+            <p>
+              Consensus filters invalid results and a winner is selected. The
+              reward is split on-chain: the winner is paid, 20% is burned, and a
+              small fee supports the platform.
+            </p>
           </div>
         </article>
+      </section>
+
+      <section className="fairness">
+        <h3>Deflationary by design</h3>
+        <p className="muted-line">
+          Every settled bounty permanently burns <strong>20% of the reward</strong>,
+          removing those QST from circulation forever. As real compute flows
+          through the network, supply shrinks — usage itself makes QST scarcer.
+        </p>
+        <ul className="bullet-list">
+          <li>Winner receives 77% of the bounty reward.</li>
+          <li>20% is burned on-chain, reducing total supply.</li>
+          <li>3% platform fee sustains the network.</li>
+          <li>Total burned to date is tracked live on the dashboard.</li>
+        </ul>
       </section>
 
       <section className="fairness">
