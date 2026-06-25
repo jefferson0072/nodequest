@@ -245,13 +245,13 @@ function Dashboard() {
             <form onSubmit={postJob}>
               <label>Job title</label>
               <input
-                placeholder="Generate 512x512 image"
+                placeholder="Summarize this research paper"
                 value={jobForm.title}
                 onChange={(e) => setJobForm({ ...jobForm, title: e.target.value })}
               />
-              <label>Input / prompt (optional)</label>
+              <label>Prompt / input</label>
               <input
-                placeholder="a neon fox in tokyo"
+                placeholder="Explain quantum computing in 3 sentences"
                 value={jobForm.input}
                 onChange={(e) => setJobForm({ ...jobForm, input: e.target.value })}
               />
@@ -339,23 +339,12 @@ function Dashboard() {
               >
                 <div className="runtime-name">Ollama ↗</div>
                 <div className="runtime-desc">
-                  Text / LLM jobs — small, medium &amp; large models
-                </div>
-              </a>
-              <a
-                className="runtime"
-                href="https://github.com/comfyanonymous/ComfyUI"
-                target="_blank"
-                rel="noreferrer"
-              >
-                <div className="runtime-name">ComfyUI ↗</div>
-                <div className="runtime-desc">
-                  Image jobs — SDXL &amp; 512×512 generation
+                  Runs the text / LLM jobs — small, medium &amp; large models
                 </div>
               </a>
             </div>
             <div className="runtime-note">
-              More runtimes (video / fine-tuning) coming soon.
+              Image generation support is coming soon.
             </div>
 
             <div className="runtime-head">Then run the agent</div>

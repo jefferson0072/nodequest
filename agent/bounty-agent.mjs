@@ -7,10 +7,9 @@
  * matching jobs, runs the work, and submits the result.
  *
  * It does REAL inference:
- *   - text-*  workloads  -> Ollama          (http://localhost:11434)
- *   - image-* workloads  -> Stable Diffusion (AUTOMATIC1111 API, :7860)
- * If the required runtime isn't reachable, the agent skips that job (it never
- * submits fake work).
+ *   - text-* workloads -> Ollama (http://localhost:11434)
+ * If Ollama isn't reachable, the agent skips that job (it never submits fake
+ * work).
  *
  * Usage:
  *   node agent/bounty-agent.mjs --name my-rig --wallet <solana-address>
@@ -23,7 +22,6 @@
  *   --vram    VRAM in GB, used if the GPU isn't in the catalog; optional
  *   --server  backend URL (default http://localhost:3000)
  *   --ollama  Ollama base URL (default http://localhost:11434)
- *   --sd      Stable Diffusion API base URL (default http://localhost:7860)
  *   --model   override the Ollama model for text jobs
  *   --poll    poll interval ms (default 3000)
  */
@@ -47,7 +45,6 @@ function parseArgs(argv) {
 const args = parseArgs(process.argv);
 const SERVER = args.server || "http://localhost:3000";
 const OLLAMA = args.ollama || "http://localhost:11434";
-const SD = args.sd || "http://localhost:7860";
 const POLL = Number(args.poll) || 3000;
 const NAME = args.name;
 const WALLET = args.wallet || "";
@@ -57,11 +54,6 @@ const TEXT_MODELS = {
   "text-small": "llama3.2:1b",
   "text-medium": "llama3.1:8b",
   "text-large": "llama3.1:70b",
-};
-// Image dimensions per image workload.
-const IMAGE_DIMS = {
-  "image-512": { width: 512, height: 512 },
-  "image-sdxl": { width: 1024, height: 1024 },
 };
 
 if (!NAME) {
@@ -144,47 +136,15 @@ async function runText(job) {
   }
 }
 
-// Real image inference via the AUTOMATIC1111 Stable Diffusion API.
-// Returns a content hash of the produced image (image bytes themselves need
-// object storage to deliver to the poster — see README).
-async function runImage(job) {
-  const dims = IMAGE_DIMS[job.workload] || { width: 512, height: 512 };
-  try {
-    const res = await fetch(`${SD}/sdapi/v1/txt2img`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        prompt: String(job.input),
-        steps: 20,
-        seed: 42,
-        cfg_scale: 7,
-        ...dims,
-      }),
-    });
-    if (!res.ok) {
-      log(`Stable Diffusion error ${res.status} at ${SD}`);
-      return null;
-    }
-    const data = await res.json();
-    const img = data.images && data.images[0];
-    if (!img) return null;
-    return "image:" + crypto.createHash("sha256").update(img).digest("hex");
-  } catch (e) {
-    log(`Stable Diffusion unreachable at ${SD} (${e.message}).`);
-    return null;
-  }
-}
-
 // Route a job to the right runtime and produce a verifiable result.
 // Returns null if this machine can't serve the job (runtime missing) so we
 // never submit fake work.
 async function runWorkload(job) {
   const start = Date.now();
-  const kind = String(job.workload).split("-")[0]; // text | image | video
+  const kind = String(job.workload).split("-")[0]; // text
 
   let output = null;
   if (kind === "text") output = await runText(job);
-  else if (kind === "image") output = await runImage(job);
   else {
     log(`Workload "${job.workload}" not supported by this agent yet — skipping.`);
     return null;
