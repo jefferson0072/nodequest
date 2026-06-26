@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
-import { listProviders, upsertProvider } from "@/lib/store";
+import { listProviders, upsertProvider, isProviderOnline } from "@/lib/store";
 import { GPU_CATALOG } from "@/lib/tiers";
 
 export async function GET() {
-  // Expose the catalog so the website can show selectable GPUs.
-  return NextResponse.json({ providers: await listProviders(), catalog: GPU_CATALOG });
+  const all = await listProviders();
+  const providers = all.filter(isProviderOnline);
+  return NextResponse.json({ providers, catalog: GPU_CATALOG });
 }
 
 export async function POST(req) {

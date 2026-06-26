@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { claimableJobs } from "@/lib/store";
+import { claimableJobs, touchProvider } from "@/lib/store";
 
 // Used by provider agents to find open jobs for their tier that they haven't
 // entered yet. Returns only the fields an agent needs to run the work.
@@ -10,6 +10,7 @@ export async function GET(req) {
   if (!tier) {
     return NextResponse.json({ error: "tier required" }, { status: 400 });
   }
+  if (providerId) await touchProvider(providerId);
   const claimable = await claimableJobs(tier, providerId);
   const jobs = claimable.map((j) => ({
     id: j.id,
