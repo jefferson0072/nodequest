@@ -61,6 +61,7 @@ function Dashboard() {
   const [origin, setOrigin] = useState("https://your-app.vercel.app");
   const [posting, setPosting] = useState(false);
   const [toast, setToast] = useState(null);
+  const [jobBoardTab, setJobBoardTab] = useState("open");
 
   const [jobForm, setJobForm] = useState({
     title: "",
@@ -153,6 +154,11 @@ function Dashboard() {
 
   const openJobs = jobs.filter((j) => j.status === "open").length;
   const settledJobs = jobs.filter((j) => j.status === "paid").length;
+  const openBoardJobs = jobs.filter(
+    (j) => j.status === "open" || j.status === "settling"
+  );
+  const completedBoardJobs = jobs.filter((j) => j.status === "paid");
+  const boardJobs = jobBoardTab === "open" ? openBoardJobs : completedBoardJobs;
 
   return (
     <main className="site-wrap">
@@ -208,10 +214,40 @@ function Dashboard() {
           <article className="module board-card">
             <div className="card-head">
               <h3>Job board</h3>
-              <span className="mini">{jobs.length} total</span>
+              <span className="mini">{boardJobs.length} shown</span>
             </div>
-            {jobs.length === 0 && <div className="empty">No jobs yet.</div>}
-            {jobs.map((job) => (
+            <div className="board-tabs">
+              <button
+                type="button"
+                className={"board-tab" + (jobBoardTab === "open" ? " active" : "")}
+                onClick={() => setJobBoardTab("open")}
+              >
+                Open
+                {openBoardJobs.length > 0 && (
+                  <span className="board-tab-count">{openBoardJobs.length}</span>
+                )}
+              </button>
+              <button
+                type="button"
+                className={
+                  "board-tab" + (jobBoardTab === "completed" ? " active" : "")
+                }
+                onClick={() => setJobBoardTab("completed")}
+              >
+                Completed
+                {completedBoardJobs.length > 0 && (
+                  <span className="board-tab-count">{completedBoardJobs.length}</span>
+                )}
+              </button>
+            </div>
+            {boardJobs.length === 0 && (
+              <div className="empty">
+                {jobBoardTab === "open"
+                  ? "No open bounties right now."
+                  : "No completed bounties yet."}
+              </div>
+            )}
+            {boardJobs.map((job) => (
               <JobCard key={job.id} job={job} />
             ))}
           </article>
