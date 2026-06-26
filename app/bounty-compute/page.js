@@ -342,7 +342,7 @@ function Dashboard() {
               competes for jobs automatically.
             </p>
 
-            <div className="runtime-head">Install Ollama + the model for your tier</div>
+            <div className="runtime-head">Install Ollama + pull the model</div>
             <div className="runtime-list">
               <a
                 className="runtime"
@@ -358,24 +358,12 @@ function Dashboard() {
             </div>
             <div className="tier-models">
               <div className="tier-model">
-                <span className={`tag t1`}>Tier 1 · Light</span>
-                <code>ollama pull llama3.2:1b</code>
-                <span className="tier-model-note">2060, 3060, 4060, 5060…</span>
-              </div>
-              <div className="tier-model">
                 <span className={`tag t2`}>Tier 2 · Standard</span>
                 <code>ollama pull llama3.1:8b</code>
-                <span className="tier-model-note">4070, 4080, 5070 Ti, 3090…</span>
-              </div>
-              <div className="tier-model">
-                <span className={`tag t3`}>Tier 3 · Heavy</span>
-                <code>ollama pull llama3.1:70b</code>
-                <span className="tier-model-note">4090, 5090, A100, H100…</span>
               </div>
             </div>
             <div className="runtime-note">
-              Your GPU tier is assigned automatically from <code>nvidia-smi</code>.
-              Only pull the model that matches your tier.
+              Your GPU tier is assigned automatically when the agent starts.
             </div>
 
             <div className="runtime-head">Then clone the repo &amp; run the agent</div>
