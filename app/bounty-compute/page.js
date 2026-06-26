@@ -410,12 +410,21 @@ function Dashboard() {
             </div>
             <div className="tier-models">
               <div className="tier-model">
+                <span className={`tag t1`}>Tier 1 · Light</span>
+                <code>ollama pull llama3.2:1b</code>
+              </div>
+              <div className="tier-model">
                 <span className={`tag t2`}>Tier 2 · Standard</span>
                 <code>ollama pull llama3.1:8b</code>
               </div>
+              <div className="tier-model">
+                <span className={`tag t3`}>Tier 3 · Heavy</span>
+                <code>ollama pull llama3.1:70b</code>
+              </div>
             </div>
             <div className="runtime-note">
-              Your GPU tier is assigned automatically when the agent starts.
+              Your GPU tier is assigned automatically when the agent starts — pull
+              the model that matches your tier.
             </div>
 
             <div className="runtime-head">Then clone the repo &amp; run the agent</div>
