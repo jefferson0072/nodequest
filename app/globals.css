@@ -879,7 +879,61 @@ button:disabled {
   color: #cec8eb;
   font-size: 12px;
   line-height: 1.5;
-  padding: 9px;
+  overflow: hidden;
+}
+
+.receipt summary {
+  cursor: pointer;
+  padding: 10px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  list-style: none;
+  user-select: none;
+}
+
+.receipt summary::-webkit-details-marker {
+  display: none;
+}
+
+.receipt summary::after {
+  content: "Show answer ▾";
+  float: right;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--brand-2);
+}
+
+.receipt[open] summary::after {
+  content: "Hide answer ▴";
+}
+
+.receipt-body {
+  padding: 0 12px 12px;
+  border-top: 1px solid #3a315b;
+}
+
+.receipt-meta {
+  margin-top: 10px;
+  margin-bottom: 8px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.receipt-result {
+  margin: 0;
+  max-height: 220px;
+  overflow: auto;
+  padding: 10px;
+  border-radius: 8px;
+  background: #0f0d18;
+  border: 1px solid #2a2440;
+  color: #d5cef0;
+  font-size: 11.5px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 
 .provider-list {

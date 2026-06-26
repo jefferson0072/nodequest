@@ -428,15 +428,18 @@ function JobCard({ job }) {
       )}
 
       {job.settlement && (
-        <div className="receipt">
-          result: {job.settlement.result}
-          <br />
-          winner: {job.settlement.winnerName} ({job.settlement.odds}% odds)
-          <br />
-          payout: {job.settlement.payout} QST · burned: {job.settlement.burn} QST
-          <br />
-          route: {job.settlement.routeHash}
-        </div>
+        <details className="receipt">
+          <summary>
+            🏆 {job.settlement.winnerName} · {job.settlement.payout} QST paid ·{" "}
+            {job.settlement.burn} QST burned
+          </summary>
+          <div className="receipt-body">
+            <div className="receipt-meta">
+              {job.settlement.odds}% odds · route {job.settlement.routeHash}
+            </div>
+            <pre className="receipt-result">{job.settlement.result}</pre>
+          </div>
+        </details>
       )}
     </div>
   );
