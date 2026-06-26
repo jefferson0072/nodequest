@@ -13,9 +13,9 @@ export async function POST(req) {
   if (!body.name) {
     return NextResponse.json({ error: "name required" }, { status: 400 });
   }
-  if (!body.gpuRawName && !body.vramGb) {
+  if (!body.gpuRawName) {
     return NextResponse.json(
-      { error: "gpuRawName or vramGb required (from nvidia-smi)" },
+      { error: "gpuRawName required (from nvidia-smi — update your agent: git pull)" },
       { status: 400 }
     );
   }
