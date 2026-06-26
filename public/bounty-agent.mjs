@@ -3,8 +3,9 @@
  * Bounty Compute - Provider Agent
  *
  * Run this on a machine with a GPU to join the network and earn QST.
- * It detects your GPU, registers (the SERVER assigns your tier), then polls for
- * matching jobs, runs the work, and submits the result.
+ * It detects your GPU (NVIDIA, AMD, Intel, or Apple Silicon), registers (the
+ * SERVER assigns your tier), then polls for matching jobs, runs the work, and
+ * submits the result.
  *
  * It does REAL inference:
  *   - text-* workloads -> Ollama (http://localhost:11434)
@@ -20,6 +21,8 @@
  *   --server  backend URL (default http://localhost:3000)
  *   --ollama  Ollama base URL (default http://localhost:11434)
  *   --model   override the Ollama model for text jobs
+ *   --gpu     override the detected GPU name (when auto-detect fails)
+ *   --vram    override detected VRAM in GB (sets your tier; use if undetected)
  *   --poll    poll interval ms (default 3000)
  */
 
@@ -77,21 +80,114 @@ async function api(path, opts) {
   return body;
 }
 
-// Try to detect the local NVIDIA GPU. Returns { rawName, vram } or null.
-function detectGpu() {
+function sh(cmd) {
+  return execSync(cmd, { stdio: ["ignore", "pipe", "ignore"] }).toString();
+}
+
+// NVIDIA via nvidia-smi.
+function detectNvidia() {
   try {
-    const out = execSync(
-      "nvidia-smi --query-gpu=name,memory.total --format=csv,noheader,nounits",
-      { stdio: ["ignore", "pipe", "ignore"] }
+    const out = sh(
+      "nvidia-smi --query-gpu=name,memory.total --format=csv,noheader,nounits"
     )
-      .toString()
       .trim()
       .split("\n")[0];
     const [rawName, mb] = out.split(",").map((s) => s.trim());
+    if (!rawName) return null;
     return { rawName, vram: Math.round(Number(mb) / 1024) };
   } catch {
     return null;
   }
+}
+
+// AMD via rocm-smi (Linux, ROCm installed).
+function detectAmd() {
+  try {
+    const name = sh("rocm-smi --showproductname")
+      .split("\n")
+      .map((l) => l.trim())
+      .find((l) => /card series|product name|gpu\[/i.test(l) && l.includes(":"));
+    const memOut = sh("rocm-smi --showmeminfo vram");
+    const memLine = memOut
+      .split("\n")
+      .find((l) => /total/i.test(l) && /\d/.test(l));
+    let vram = 0;
+    if (memLine) {
+      const m = memLine.match(/(\d+)/g);
+      if (m) vram = Math.round(Number(m[m.length - 1]) / 1024 ** 3);
+    }
+    const rawName = name
+      ? name.split(":").pop().trim()
+      : "AMD Radeon GPU";
+    if (!rawName) return null;
+    return { rawName: `AMD ${rawName}`.replace(/AMD\s+AMD/i, "AMD"), vram };
+  } catch {
+    return null;
+  }
+}
+
+// Cross-platform fallback: enumerate the display adapter from the OS.
+// Works for any vendor (Intel/AMD/NVIDIA/Apple) but VRAM may be approximate.
+function detectGeneric() {
+  try {
+    if (process.platform === "win32") {
+      // Name from WMI; VRAM from the registry (AdapterRAM is capped at 4GB).
+      const name = sh(
+        'powershell -NoProfile -Command "(Get-CimInstance Win32_VideoController | Select-Object -First 1).Name"'
+      ).trim();
+      let vram = 0;
+      try {
+        const qw = sh(
+          'powershell -NoProfile -Command "(Get-ItemProperty \'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Class\\{4d36e968-e325-11ce-bfc1-08002be10318}\\0000\' -Name HardwareInformation.qwMemorySize).\'HardwareInformation.qwMemorySize\'"'
+        ).trim();
+        if (qw) vram = Math.round(Number(qw) / 1024 ** 3);
+      } catch {}
+      if (!name) return null;
+      return { rawName: name, vram };
+    }
+    if (process.platform === "darwin") {
+      const out = sh("system_profiler SPDisplaysDataType");
+      const name = (out.match(/Chipset Model:\s*(.+)/) || [])[1]?.trim();
+      const vramStr = (out.match(/VRAM.*?:\s*(\d+)\s*(MB|GB)/i) || []);
+      let vram = 0;
+      if (vramStr[1]) {
+        vram = Number(vramStr[1]);
+        if (/MB/i.test(vramStr[2])) vram = Math.round(vram / 1024);
+      }
+      // Apple Silicon reports no discrete VRAM; approximate from unified RAM.
+      if (!vram) {
+        try {
+          const mem = sh("sysctl -n hw.memsize").trim();
+          if (mem) vram = Math.round((Number(mem) / 1024 ** 3) * 0.66);
+        } catch {}
+      }
+      if (!name) return null;
+      return { rawName: name, vram };
+    }
+    // Linux: lspci for the name (no reliable VRAM without vendor tools).
+    const out = sh("lspci");
+    const line = out
+      .split("\n")
+      .find((l) => /VGA compatible controller|3D controller/i.test(l));
+    const rawName = line ? line.split(":").slice(2).join(":").trim() : null;
+    if (!rawName) return null;
+    return { rawName, vram: 0 };
+  } catch {
+    return null;
+  }
+}
+
+// Detect the local GPU across vendors. Returns { rawName, vram } or null.
+// A manual --vram override always wins (useful when auto-detection can't read it).
+function detectGpu() {
+  const vramOverride = Number(args.vram) || 0;
+  const detected =
+    detectNvidia() || detectAmd() || detectGeneric() || null;
+  if (!detected) {
+    return vramOverride ? { rawName: args.gpu || "Unknown GPU", vram: vramOverride } : null;
+  }
+  if (vramOverride) detected.vram = vramOverride;
+  return detected;
 }
 
 function hashOf(text) {
@@ -152,8 +248,17 @@ const skipped = new Set();
 async function register() {
   const detected = detectGpu();
   if (!detected) {
-    console.error("Error: no NVIDIA GPU detected (nvidia-smi unavailable)");
+    console.error(
+      "Error: could not detect a GPU. Tried nvidia-smi, rocm-smi, and OS enumeration.\n" +
+        "Pass it manually, e.g.: --gpu \"Radeon RX 7900 XTX\" --vram 24"
+    );
     process.exit(1);
+  }
+  if (!detected.vram) {
+    log(
+      "Warning: couldn't read VRAM automatically — tier will be estimated. " +
+        "For accuracy pass --vram <GB>."
+    );
   }
 
   log(`Detected GPU: ${detected.rawName} (${detected.vram}GB)`);

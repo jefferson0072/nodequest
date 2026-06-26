@@ -391,7 +391,8 @@ function Dashboard() {
             <p className="meta">
               Providers join by running the agent on a real machine (needs
               Node.js 18+, no install) — it detects the GPU, registers, and
-              competes for jobs automatically.
+              competes for jobs automatically. Works with NVIDIA, AMD, Intel
+              Arc, and Apple Silicon.
             </p>
 
             <div className="runtime-head">Install Ollama + pull the model</div>
@@ -423,8 +424,11 @@ function Dashboard() {
               </div>
             </div>
             <div className="runtime-note">
-              Your GPU tier is assigned automatically when the agent starts — pull
-              the model that matches your tier.
+              Your GPU tier is assigned automatically (by VRAM) when the agent
+              starts — pull the model that matches your tier. AMD/Intel GPUs need
+              Ollama with the right backend (ROCm / IPEX); otherwise they run on
+              CPU. If VRAM isn&apos;t detected, pass{" "}
+              <code>--vram &lt;GB&gt;</code>.
             </div>
 
             <div className="runtime-head">Then clone the repo &amp; run the agent</div>

@@ -149,7 +149,7 @@ export default function HowItWorksPage() {
           users — so nobody can cheat the system:
         </p>
         <ul className="bullet-list">
-          <li>Every GPU is sorted into a tier (Light, Standard, Heavy) by its model.</li>
+          <li>Every GPU — NVIDIA, AMD, Intel, or Apple Silicon — is sorted into a tier (Light, Standard, Heavy) by its VRAM.</li>
           <li>Every job is sorted into a tier by what it actually requires.</li>
           <li>A job only competes among GPUs in its own tier — small rigs aren’t crushed by big ones.</li>
           <li>Reliable providers build reputation, which improves their odds over time.</li>

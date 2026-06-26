@@ -15,7 +15,11 @@ export async function POST(req) {
   }
   if (!body.gpuRawName) {
     return NextResponse.json(
-      { error: "gpuRawName required (from nvidia-smi — update your agent: git pull)" },
+      {
+        error:
+          "gpuRawName required (detected by the agent — update yours: git pull). " +
+          "If auto-detection fails, run with --gpu \"<name>\" --vram <GB>.",
+      },
       { status: 400 }
     );
   }
